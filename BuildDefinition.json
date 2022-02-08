@@ -1,0 +1,374 @@
+{
+    "build": [
+        {
+            "enabled": true,
+            "continueOnError": false,
+            "alwaysRun": false,
+            "displayName": "Prepare for build",
+            "task": {
+                "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "scriptType": "filePath",
+                "scriptName": "$(DynamicsSDK)\\PrepareForBuild.ps1",
+                "arguments": "-DatabaseBackupToRestore \"$(DatabaseBackupToRestore)\" -Verbose",
+                "workingFolder": ""
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": false,
+            "alwaysRun": false,
+            "displayName": "Set Model Versions",
+            "task": {
+                "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "scriptType": "filePath",
+                "scriptName": "$(DynamicsSDK)\\UpdateModelBuildNumbers.ps1",
+                "arguments": "-BuildMetadataPath \"$(Build.SourcesDirectory)\\Metadata\" -BuildNumber \"$(Build.BuildNumber)\" -ModelExclusions \"$(ModelVersionExclusions)\"",
+                "workingFolder": ""
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": false,
+            "alwaysRun": false,
+            "displayName": "Build the solution",
+            "task": {
+                "id": "c6c4c611-aa2e-4a33-b606-5eaba2196824",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "solution": "$/$($ProjectName)/Trunk/$($Branch)/AXModulesBuild.proj",
+                "platform": "$(BuildPlatform)",
+                "configuration": "$(BuildConfiguration)",
+                "msbuildArguments": "/p:OutputPath=\"$(Agent.BuildDirectory)\\Bin\" /p:LogPath=\"$(Agent.BuildDirectory)\\Logs\"",
+                "clean": "true",
+                "restoreNugetPackages": "false",
+                "logProjectEvents": "true",
+                "msbuildLocationMethod": "version",
+                "msbuildVersion": "15.0",
+                "msbuildArchitecture": "x64",
+                "msbuildLocation": ""
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": false,
+            "alwaysRun": false,
+            "displayName": "Database Sync",
+            "task": {
+                "id": "c6c4c611-aa2e-4a33-b606-5eaba2196824",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "solution": "$(DynamicsSDK)\\Metadata\\SyncEngine.proj",
+                "platform": "$(BuildPlatform)",
+                "configuration": "$(BuildConfiguration)",
+                "msbuildArguments": "/p:OutputPath=\"$(Agent.BuildDirectory)\\Bin\" /p:LogPath=\"$(Agent.BuildDirectory)\\Logs\" /p:FallbackToNative=\"$(SyncEngineFallbackToNative)\" /p:GenerateEntityMapping=\"$(GenerateEntityMapping)\"",
+                "clean": "false",
+                "restoreNugetPackages": "false",
+                "logProjectEvents": "true",
+                "msbuildLocationMethod": "version",
+                "msbuildVersion": "15.0",
+                "msbuildArchitecture": "x64",
+                "msbuildLocation": ""
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": false,
+            "alwaysRun": false,
+            "displayName": "Deploy Reports",
+            "task": {
+                "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "scriptType": "filePath",
+                "scriptName": "$(DynamicsSDK)\\DeploySSRSReports.ps1",
+                "arguments": "-DeployReports:([bool]$(DeployReports)) -Verbose",
+                "workingFolder": ""
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": true,
+            "alwaysRun": false,
+            "displayName": "Generate Packages",
+            "task": {
+                "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "scriptType": "filePath",
+                "scriptName": "$(DynamicsSDK)\\GeneratePackage.ps1",
+                "arguments": "-BuildPackagePath \"$(Agent.BuildDirectory)\\Packages\" -BuildBinPath \"$(Agent.BuildDirectory)\\Bin\" -BuildMetadataPath \"$(Build.SourcesDirectory)\\Metadata\" -BuildVersion \"$(Build.BuildNumber)\" -NoRuntime:([bool]$(SkipRuntimePackageGeneration)) -NoSource:([bool]$(SkipSourcePackageGeneration)) -Verbose -ExclusionList \"$(PackagingExclusions)\" -IncludeBinaries:([bool]$(IncludeBinariesInRuntimePackage))",
+                "workingFolder": ""
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": true,
+            "alwaysRun": false,
+            "displayName": "Copy Files to: Staging Directory",
+            "task": {
+                "id": "5bfb729a-a7c8-4a78-a7c3-8d717bb7c13c",
+                "versionSpec": "2.*"
+            },
+            "inputs": {
+                "SourceFolder": "$(Agent.BuildDirectory)",
+                "Contents": "Packages\\*.zip",
+                "TargetFolder": "$(Build.ArtifactStagingDirectory)",
+                "CleanTargetFolder": "false",
+                "OverWrite": "false",
+                "flattenFolders": "false"
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": true,
+            "alwaysRun": false,
+            "displayName": "Publish Artifact: Packages",
+            "task": {
+                "id": "2ff763a7-ce83-4e1f-bc89-0ae63477cebe",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "PathtoPublish": "$(Build.ArtifactStagingDirectory)\\Packages",
+                "ArtifactName": "Packages",
+                "ArtifactType": "Container",
+                "TargetPath": "\\\\my\\share\\$(Build.DefinitionName)\\$(Build.BuildNumber)",
+                "Parallel": "false",
+                "ParallelCount": "8"
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": true,
+            "alwaysRun": false,
+            "displayName": "Test Setup",
+            "task": {
+                "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "scriptType": "filePath",
+                "scriptName": "$(DynamicsSDK)\\Test\\TestStart.ps1",
+                "arguments": "-BuildNumber \"$(Build.SourceBranch)@$(Build.BuildNumber)\"",
+                "workingFolder": ""
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": true,
+            "alwaysRun": false,
+            "displayName": "Execute Tests",
+            "task": {
+                "id": "ef087383-ee5e-42c7-9a53-ab56c98420f9",
+                "versionSpec": "2.*"
+            },
+          "inputs": {
+            "testSelector": "testAssemblies",
+            "testAssemblyVer2": "$(TestAssembly)",
+            "testPlan": "",
+            "testSuite": "",
+            "testConfiguration": "",
+            "tcmTestRun": "$(test.RunId)",
+            "searchFolder": "$(Agent.BuildDirectory)\\Bin\\",
+            "testFiltercriteria": "$(TestFilter)",
+            "runOnlyImpactedTests": "False",
+            "runAllTestsAfterXBuilds": "50",
+            "uiTests": "false",
+            "vstestLocationMethod": "version",
+            "vsTestVersion": "15.0",
+            "vstestLocation": "",
+            "runSettingsFile": "",
+            "overrideTestrunParameters": "",
+            "runInParallel": "false",
+            "runTestsInIsolation": "False",
+            "pathtoCustomTestAdapters": "",
+            "codeCoverageEnabled": "true",
+            "otherConsoleOptions": "/Platform:X64 /InIsolation /TestAdapterPath:\"$(VsixExtensionFolder)\"",
+            "testRunTitle": "Unit Test - $(Build.DefinitionName)",
+            "platform": "$(BuildPlatform)",
+            "configuration": "$(BuildConfiguration)",
+            "publishRunAttachments": "true"
+          }
+        },
+        {
+            "enabled": true,
+            "continueOnError": true,
+            "alwaysRun": false,
+            "displayName": "Test End",
+            "task": {
+                "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "scriptType": "filePath",
+                "scriptName": "$(DynamicsSDK)\\Test\\TestEnd.ps1",
+                "arguments": "-BuildNumber \"$(Build.SourceBranch)@$(Build.BuildNumber)\"",
+                "workingFolder": ""
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": true,
+            "alwaysRun": false,
+            "displayName": "Copy Files to: Staging Directory",
+            "task": {
+                "id": "5bfb729a-a7c8-4a78-a7c3-8d717bb7c13c",
+                "versionSpec": "2.*"
+            },
+            "inputs": {
+                "SourceFolder": "$(Agent.BuildDirectory)",
+                "Contents": "Logs\\**",
+                "TargetFolder": "$(Build.ArtifactStagingDirectory)",
+                "CleanTargetFolder": "false",
+                "OverWrite": "false",
+                "flattenFolders": "false"
+            }
+        },
+        {
+            "enabled": true,
+            "continueOnError": true,
+            "alwaysRun": false,
+            "displayName": "Publish Artifact: AdditionalLogs",
+            "task": {
+                "id": "2ff763a7-ce83-4e1f-bc89-0ae63477cebe",
+                "versionSpec": "1.*"
+            },
+            "inputs": {
+                "PathtoPublish": "$(Build.ArtifactStagingDirectory)\\Logs",
+                "ArtifactName": "AdditionalLogs",
+                "ArtifactType": "Container",
+                "TargetPath": "\\\\my\\share\\$(Build.DefinitionName)\\$(Build.BuildNumber)",
+                "Parallel": "false",
+                "ParallelCount": "8"
+            }
+        }
+    ],
+    "buildNumberFormat": "$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)",
+    "demands": [
+        "DynamicsSDK"
+    ],
+    "description": "Dynamics AX 7.0 Build Definition",
+    "jobAuthorizationScope": "project",
+    "jobTimeoutInMinutes": 720,
+    "name": "$($BuildDefinitionName)",
+    "options": [
+        {
+            "enabled": false,
+            "definition": {
+                "id": "7c555368-ca64-4199-add6-9ebaf0b0137d"
+            },
+            "inputs": {
+                "multipliers": "[]",
+                "parallel": "false",
+                "continueOnError": "true",
+                "additionalFields": "{}"
+            }
+        }
+    ],
+    "quality": "definition",
+    "queue": {
+        "id": -1
+    },
+    "repository": {
+        "properties": {
+            "labelSources": "46",
+            "labelSourcesFormat": "$(Build.BuildNumber)",
+            "tfvcMapping": "{\"mappings\":[{\"serverPath\":\"$/$($ProjectName)/Trunk/$($Branch)\",\"mappingType\":\"map\",\"localPath\":\"\\\\\"}]}",
+            "cleanOptions": "0"
+        },
+        "id": "$/",
+        "type": "TfsVersionControl",
+        "name": "$($ProjectName)",
+        "url": "$($VSO_ProjectCollection)",
+        "defaultBranch": "$/$($ProjectName)/Trunk/$($Branch)",
+        "rootFolder": "$/$($ProjectName)",
+        "clean": "true",
+        "checkoutSubmodules": false
+    },
+    "retentionRules": [
+        {
+            "branches": [
+                "+refs/heads/*"
+            ],
+            "artifacts": [
+
+            ],
+            "daysToKeep": 10,
+            "minimumToKeep": 1,
+            "deleteBuildRecord": true,
+            "deleteTestResults": false
+        }
+    ],
+    "type": "build",
+    "variables": {
+        "BuildConfiguration": {
+            "value": "Release",
+            "allowOverride": true
+        },
+        "BuildPlatform": {
+            "value": "Any CPU",
+            "allowOverride": true
+        },
+        "DatabaseBackupToRestore": {
+            "value": "",
+            "allowOverride": true
+        },
+        "DependencyXml": {
+            "value": "",
+            "allowOverride": true
+        },
+        "ModelVersionExclusions": {
+            "value": "",
+            "allowOverride": false
+        },
+        "SkipSyncEngine": {
+            "value": "0",
+            "allowOverride": true
+        },
+        "SkipRuntimePackageGeneration": {
+            "value": "0",
+            "allowOverride": true
+        },
+        "PackagingExclusions": {
+            "value": "",
+            "allowOverride": true
+        },
+        "IncludeBinariesInRuntimePackage": {
+            "value": "1",
+            "allowOverride": true
+        },
+        "SkipSourcePackageGeneration": {
+            "value": "0",
+            "allowOverride": true
+        },
+        "TestAssembly": {
+            "value": "**\\*Test*.dll",
+            "allowOverride": true
+        },
+        "TestFilter": {
+            "value": "",
+            "allowOverride": true
+        },
+        "DeployReports": {
+            "value": "1",
+            "allowOverride": true
+        },
+        "SyncEngineFallbackToNative": {
+            "value": "0",
+            "allowOverride": false
+        },
+        "GenerateEntityMapping": {
+          "value": "1",
+          "allowOverride": true
+        }
+    }
+}

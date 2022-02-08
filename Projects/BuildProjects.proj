@@ -1,0 +1,26 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+  <PropertyGroup>
+    <ProjectToBuild></ProjectToBuild>
+    <DestinationDir></DestinationDir>
+  </PropertyGroup>
+
+  <!-- List of destination paths for project output. -->
+  <ItemGroup>
+    <DestinationPaths Include="$(DestinationDir)"/>
+  </ItemGroup>
+
+  <!-- Build the project. -->
+  <Target Name="Build" Condition="'$(ProjectToBuild)'!=''">
+    <MSBuild Projects="$(ProjectToBuild)" Targets="Build">
+      <Output ItemName="OutputFiles" TaskParameter="TargetOutputs"/>
+    </MSBuild>
+  </Target>
+
+  <!-- Copy the project output to each destination path. -->
+  <Target Name="CopyToDestinations" AfterTargets="Build" Outputs="%(DestinationPaths.Identity)" Condition="'$(ProjectToBuild)'!=''">
+    <PropertyGroup>
+      <DestinationPath>%(DestinationPaths.Identity)</DestinationPath>
+    </PropertyGroup>
+    <Copy SourceFiles="@(OutputFiles)" DestinationFolder="$(DestinationPath)" Condition="'$(DestinationPath)'!=''" Retries="3" RetryDelayMilliseconds="1000" OverwriteReadOnlyFiles="true" />
+  </Target>
+</Project>

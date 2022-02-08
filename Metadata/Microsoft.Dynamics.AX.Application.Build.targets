@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--Include the msbuild tasks that need to be executed-->
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Xppc" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Pgc" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Labelc" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Reportsc" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Xppbp" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+
+  <!--Create Module property from itemGroup so it would persist across all targets-->
+  <Target Name="CreateProperty">
+    <ItemGroup>
+      <ModuleItemName Include="%(Model.Module)" />
+    </ItemGroup>
+    <CreateProperty Value="@(ModuleItemName)">
+      <Output TaskParameter="Value" PropertyName="Module"/>
+    </CreateProperty>
+  </Target>
+
+  <PropertyGroup>
+    <TargetName>Dynamics.AX</TargetName>
+    <FrameworkDirectory>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Dynamics\AX\7.0\SDK@BinariesPath)</FrameworkDirectory>
+    <MetadataDirectory>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Dynamics\AX\7.0\SDK@MetadataPath)</MetadataDirectory>
+  </PropertyGroup>
+
+  <!--Verify if the folders exist-->
+  <Target Name="Pre-Checks" AfterTargets="CreateProperty">
+    <Error Condition="!Exists('$(FrameworkDirectory)')" Text="$(FrameworkDirectory) passed as Framework Directory does not exist" />
+    <Error Condition="!Exists('$(MetadataDirectory)')" Text="$(MetadataDirectory) passed as Metadata Directory does not exist" />
+    <MakeDir Directories="$(LogPath)\$(Module)" Condition="!Exists('$(LogPath)\$(Module)')" ContinueOnError="ErrorAndStop" />
+    <MakeDir Directories="$(OutputPath)\$(Module)" Condition="!Exists('$(OutputPath)\$(Module)')" ContinueOnError="ErrorAndStop" />
+  </Target>
+
+  <!--Execute Xppc compiler-->
+  <Target Name="Xppc" AfterTargets="Pre-Checks">
+    <PropertyGroup>
+      <OutputDirectory>$(MetadataDirectory)\$(Module)\bin</OutputDirectory>
+      <LogLocation>$(LogPath)\$(Module)</LogLocation>
+    </PropertyGroup>
+    <Xppc FrameworkDirectory="$(FrameworkDirectory)"
+          OutputDirectory="$(OutputDirectory)"
+          TargetName="$(TargetName).$(Module)"
+          LogLocation="$(LogLocation)"
+          ModuleName="$(Module)"
+          MetadataDirectory="$(MetadataDirectory)"
+          ReferenceFolder="$(MetadataDirectory)"
+          ReferencePath="$(OutputDirectory)"
+          InitializeXRef="FALSE"
+          GenerateXRef="FALSE"
+          APIXRef="TRUE"
+          FailFast="FALSE"
+          FailOnLogFatals="TRUE"
+          FailOnLogErrors="TRUE"
+          FailOnLogWarnings="FALSE"
+          Timeout="3600000"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High"
+          ContinueOnError="ErrorAndStop" />
+    <ItemGroup>
+      <BinFiles Include="$(MetadataDirectory)\$(Module)\bin\**\*.*"/>
+      <XrefFiles Include="$(MetadataDirectory)\$(Module)\*.xref"/>
+    </ItemGroup>
+    <Copy SourceFiles="@(BinFiles)"
+          DestinationFiles="@(BinFiles->'$(OutputPath)\$(Module)\bin\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <!-- Copy FileLocations.xml to output to allow package creation to run for packages that require additional files. -->
+    <Copy SourceFiles="$(MetadataDirectory)\$(Module)\FileLocations.xml"
+          DestinationFiles="$(OutputPath)\$(Module)\FileLocations.xml" Condition="Exists('$(MetadataDirectory)\$(Module)\FileLocations.xml')" />
+    <Copy SourceFiles="@(XrefFiles)"
+          DestinationFiles="@(XrefFiles->'$(OutputPath)\$(Module)\%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--Execute Labelc executable-->
+  <Target Name="Labelc" AfterTargets="Xppc">
+    <PropertyGroup>
+      <OutputDirectory>$(MetadataDirectory)\$(Module)\Resources\</OutputDirectory>
+      <LogLocation>$(LogPath)\$(Module)</LogLocation>
+    </PropertyGroup>
+    <Labelc FrameworkDirectory="$(FrameworkDirectory)"
+            OutputDirectory="$(OutputDirectory)"
+            TargetName="$(TargetName).$(Module)"
+            LogLocation="$(LogLocation)"
+            ModuleName="$(Module)"
+            MetadataDirectory="$(MetadataDirectory)"
+            Timeout="3600000"
+            StandardOutputImportance="High"
+            StandardErrorImportance="High"
+            ContinueOnError="ErrorAndStop" />
+    <ItemGroup>
+      <LabelcFiles Include="$(MetadataDirectory)\$(Module)\Resources\**\*.*"/>
+    </ItemGroup>
+    <Copy SourceFiles="@(LabelcFiles)"
+          DestinationFiles="@(LabelcFiles->'$(OutputPath)\$(Module)\Resources\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--Execute Reportsc executable-->
+  <Target Name="Reportsc" AfterTargets="Labelc">
+    <PropertyGroup>
+      <OutputDirectory>$(MetadataDirectory)\$(Module)\Reports\</OutputDirectory>
+      <LogLocation>$(LogPath)\$(Module)</LogLocation>
+    </PropertyGroup>
+    <Reportsc FrameworkDirectory="$(FrameworkDirectory)"
+              OutputDirectory="$(OutputDirectory)"
+              TargetName="$(TargetName).$(Module)"
+              LogLocation="$(LogLocation)"
+              ModuleName="$(Module)"
+              MetadataDirectory="$(MetadataDirectory)"
+              LabelsDirectory="$(MetadataDirectory)"
+              FailOnLogFatals="TRUE"
+              FailOnLogErrors="TRUE"
+              FailOnLogWarnings="FALSE"
+              Timeout="1800000"
+              StandardOutputImportance="High"
+              StandardErrorImportance="High"
+              ContinueOnError="ErrorAndStop" />
+    <ItemGroup>
+      <ReportscFiles Include="$(MetadataDirectory)\$(Module)\Reports\**\*.*"/>
+    </ItemGroup>
+    <Copy SourceFiles="@(ReportscFiles)"
+          DestinationFiles="@(ReportscFiles->'$(OutputPath)\$(Module)\Reports\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--Best practices check for every model-->
+  <Target Name="Xppbp" AfterTargets="Reportsc">
+    <PropertyGroup>
+      <OutputDirectory>$(MetadataDirectory)\$(Module)\XPPBP\</OutputDirectory>
+      <LogLocation>$(LogPath)\$(Module)</LogLocation>
+      <GenerateCAR Condition="'$(GenerateCAR)' == ''">0</GenerateCAR>
+    </PropertyGroup>
+    <Xppbp FrameworkDirectory="$(FrameworkDirectory)"
+           ModuleName="$(Module)"
+           ModelName="%(Model.Identity)"
+           MetadataDirectory="$(MetadataDirectory)"
+           PackagesRoot="$(MetadataDirectory)"
+           OutputDirectory="$(OutputDirectory)"
+           FailOnLogFatals="TRUE"
+           FailOnLogErrors="TRUE"
+           FailOnLogWarnings="FALSE"
+           TargetName="$(TargetName).$(Module)"
+           LogLocation="$(LogLocation)"
+           GenerateCAR="$(GenerateCAR)"
+           ContinueOnError="WarnAndContinue" />
+  </Target>
+</Project>

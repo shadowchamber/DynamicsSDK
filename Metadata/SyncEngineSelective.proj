@@ -1,0 +1,18 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+
+  <!-- Execute SyncEngine script to find and sync the tables present in the source folder. -->
+  <Target Name="SyncEngine">
+    <PropertyGroup>
+      <LogLocation>$(LogPath)\$(TargetName)</LogLocation>
+      <SourcesPath>$(BuildMetadataPath)</SourcesPath>
+    </PropertyGroup>
+
+    <Exec Command="powershell.exe -NonInteractive -ExecutionPolicy RemoteSigned -Command &quot;&amp; {$(DynamicsSDK)\SelectiveSync.ps1 -SourcePath '$(SourcesPath)'}&quot;"
+		ContinueOnError="WarnAndContinue"
+		Condition="'$(SkipSyncEngine)'!='1'" />
+    <Message Condition="'$(SkipSyncEngine)'=='1'" Text="Sync engine was skipped due to SkipSyncEngine condition being set to 1." />
+  </Target>
+  <Target Name="Clean">
+    <Message Text="Sync engine clean" />
+  </Target>
+</Project>

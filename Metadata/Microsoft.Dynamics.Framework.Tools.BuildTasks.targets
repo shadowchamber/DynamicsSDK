@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--Include the msbuild tasks that need to be executed-->
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Xppc" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Pgc" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Labelc" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Reportsc" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.Xppbp" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.FindModuleFromDescriptor" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.SolutionFileParser" AssemblyFile="Microsoft.Dynamics.AX.Build.Tasks.dll" />
+
+  <Target Name="ResolveModels">
+    <PropertyGroup>
+      <MetadataDirectory Condition=" '$(MetadataDirectory)' == '' ">$(MSBuildProjectDirectory)\..</MetadataDirectory>
+    </PropertyGroup>
+    <SolutionFileParser SolutionFilePath="$(SolutionPath)">
+      <Output ItemName="ProjectFiles" TaskParameter="Projects"/>
+    </SolutionFileParser>
+    <FindModuleFromDescriptor ModelName="$(Model)" MetadataDirectory="$(MetadataDirectory)" Projects="$(ProjectFiles)">
+      <Output TaskParameter="ModuleName" PropertyName="Module" />
+      <Output TaskParameter="ProjectReferences" PropertyName="ProjReferences" />
+    </FindModuleFromDescriptor>
+    <PropertyGroup>
+      <TargetName>Dynamics.AX</TargetName>
+      <LogLocation>$(MSBuildProjectDirectory)</LogLocation>
+      <ReferenceFolder Condition=" '$(ReferenceFolder)' == '' ">$(MetadataDirectory)</ReferenceFolder>
+      <OutputDirectory Condition=" '$(OutputDirectory)' == '' ">$(MetadataDirectory)</OutputDirectory>
+      <ReferencePath Condition=" '$(ReferencePath)' == '' ">$(OutputDirectory)\$(Module)\bin</ReferencePath>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="ProjectReferenceHook" BeforeTargets="BeforeResolveReferences" DependsOnTargets="ResolveModels">
+    <ItemGroup Condition="'$(ProjReferences)' != ''">
+      <ProjectReference Include="$(ProjReferences)">
+      </ProjectReference>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CopyReferences" DependsOnTargets="ResolveModels;ProjectReferenceHook;ResolveProjectReferences;ResolveAssemblyReferences">
+    <Copy SourceFiles="@(ReferencePath)"
+      DestinationFiles="@(ReferencePath->'$(OutputDirectory)\$(Module)\bin\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--Execute Xppc compiler-->
+  <Target Name="Build" DependsOnTargets="CopyReferences">
+    <Xppc FrameworkDirectory="$(FrameworkDirectory)"
+        CompilerMetadataDirectory="$(MetadataDirectory)"
+        OutputDirectory="$(OutputDirectory)\$(Module)\bin"
+        TargetName="$(TargetName).$(Module)"
+        LogLocation="$(LogLocation)"
+        ModuleName="$(Module)"
+        MetadataDirectory="$(MetadataDirectory)"
+        ReferenceFolder="$(ReferenceFolder)"
+        ReferencePath="$(ReferencePath)"
+        InitializeXRef="FALSE"
+        GenerateXRef="FALSE"
+        APIXRef="TRUE"
+        FailFast="FALSE"
+        FailOnLogFatals="TRUE"
+        FailOnLogErrors="TRUE"
+        FailOnLogWarnings="FALSE"
+        Timeout="3600000"
+        StandardOutputImportance="High"
+        StandardErrorImportance="High"
+        ContinueOnError="ErrorAndStop" />
+    <ItemGroup>
+      <BinFiles Include="$(MetadataDirectory)\$(Module)\bin\**\*.*"/>
+    </ItemGroup>
+    <Copy Condition=" '$(MetadataDirectory)' != '$(OutputDirectory)' " SourceFiles="@(BinFiles)"
+        DestinationFiles="@(BinFiles->'$(OutputDirectory)\$(Module)\bin\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--Best practices check for every model-->
+  <Target Name="Xppbp" AfterTargets="Build">
+    <PropertyGroup>
+      <GenerateCAR Condition="'$(GenerateCAR)' == ''">0</GenerateCAR>
+    </PropertyGroup>
+    <Xppbp FrameworkDirectory="$(FrameworkDirectory)"
+           ModuleName="$(Module)"
+           ModelName="$(Model)"
+           MetadataDirectory="$(MetadataDirectory)"
+           ReferenceFolder="$(ReferenceFolder)"
+           PackagesRoot="$(MetadataDirectory)"
+           OutputDirectory="$(OutputDirectory)\$(Module)\bin"
+           FailOnLogFatals="TRUE"
+           FailOnLogErrors="TRUE"
+           FailOnLogWarnings="FALSE"
+           TargetName="$(TargetName).$(Module)"
+           LogLocation="$(LogLocation)"
+           GenerateCAR="$(GenerateCAR)"
+           ContinueOnError="WarnAndContinue" />
+  </Target>
+
+  <!--Execute Labelc executable-->
+  <Target Name="Labelc" AfterTargets="Xppbp">
+    <PropertyGroup>
+      <CsCompilerPath Condition="'$(CsCompilerPath)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\NET Framework Setup\NDP\v4\Full@InstallPath)</CsCompilerPath>
+      <NetSDKToolsPath Condition="'$(NetSDKToolsPath)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Microsoft SDKs\Windows\v8.1A\WinSDK-NetFx40Tools@InstallationFolder)</NetSDKToolsPath>
+      <NetSDKToolsPath Condition="'$(NetSDKToolsPath)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Microsoft SDKs\NETFXSDK\4.6.1\WinSDK-NetFx40Tools@InstallationFolder)</NetSDKToolsPath>
+    </PropertyGroup>
+    <Labelc FrameworkDirectory="$(FrameworkDirectory)"
+            OutputDirectory="$(OutputDirectory)\$(Module)\Resources\"
+            TargetName="$(TargetName).$(Module)"
+            LogLocation="$(LogLocation)"
+            ModuleName="$(Module)"
+            MetadataDirectory="$(MetadataDirectory)"
+            SDKToolsPath="$(NetSDKToolsPath)"
+            CompilerPath="$(CsCompilerPath)"
+            Timeout="3600000"
+            StandardOutputImportance="High"
+            StandardErrorImportance="High"
+            ContinueOnError="ErrorAndStop" />
+    <ItemGroup>
+      <LabelcFiles Include="$(MetadataDirectory)\$(Module)\Resources\**\*.*"/>
+    </ItemGroup>
+    <Copy SourceFiles="@(LabelcFiles)"
+          DestinationFiles="@(LabelcFiles->'$(OutputDirectory)\$(Module)\Resources\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--Execute Reportsc executable-->
+  <Target Name="Reportsc" AfterTargets="Labelc">
+    <Reportsc FrameworkDirectory="$(FrameworkDirectory)"
+              OutputDirectory="$(OutputDirectory)\$(Module)\Reports\"
+              TargetName="$(TargetName).$(Module)"
+              LogLocation="$(LogLocation)"
+              ModuleName="$(Module)"
+              MetadataDirectory="$(MetadataDirectory)"
+              LabelsDirectory="$(MetadataDirectory)"
+              ReferenceFolder="$(ReferenceFolder)"
+              FailOnLogFatals="TRUE"
+              FailOnLogErrors="TRUE"
+              FailOnLogWarnings="FALSE"
+              Timeout="1800000"
+              StandardOutputImportance="High"
+              StandardErrorImportance="High"
+              ContinueOnError="ErrorAndStop" />
+  </Target>
+</Project>

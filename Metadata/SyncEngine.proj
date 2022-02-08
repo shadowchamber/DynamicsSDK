@@ -1,0 +1,29 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+  <UsingTask TaskName="Microsoft.Dynamics.AX.Build.Tasks.SyncEngine" AssemblyFile="$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Dynamics\AX\7.0\SDK@DynamicsSDK)\Metadata\Microsoft.Dynamics.AX.Build.Tasks.dll" />
+  <PropertyGroup>
+    <FrameworkDirectory>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Dynamics\AX\7.0\SDK@BinariesPath)</FrameworkDirectory>
+    <PackagesPath>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Dynamics\AX\7.0\SDK@PackagesPath)</PackagesPath>
+    <DatabaseServer>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Dynamics\AX\7.0\SDK@DatabaseServer)</DatabaseServer>
+    <DatabaseName>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Dynamics\AX\7.0\SDK@DatabaseName)</DatabaseName>
+    <GenerateEntityMapping Condition="'$(GenerateEntityMapping)' == ''">1</GenerateEntityMapping>
+  </PropertyGroup>
+  <!-- Execute SyncEngine task to sync all the tables present in the metadata store. -->
+  <Target Name="SyncEngine">
+    <PropertyGroup>
+      <LogLocation>$(LogPath)\$(TargetName)</LogLocation>
+    </PropertyGroup>
+    <SyncEngine FrameworkDirectory="$(FrameworkDirectory)"
+                MetadataBinaries="$(PackagesPath)"
+                SyncMode="fullall"
+                DatabaseName="$(DatabaseName)"
+                DatabaseServer="$(DatabaseServer)"
+                FallbackToNative="$(FallbackToNative)"
+                RaiseDataEntityViewSyncNotification="$(GenerateEntityMapping)"
+                ContinueOnError="ErrorAndStop"
+                Condition="'$(SkipSyncEngine)'!='1'" />
+    <Message Condition="'$(SkipSyncEngine)'=='1'" Text="Sync engine was skipped due to SkipSyncEngine condition being set to 1." />
+  </Target>
+  <Target Name="Clean">
+    <Message Text="Sync engine clean" />
+  </Target>
+</Project>

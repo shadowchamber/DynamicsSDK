@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+  <PropertyGroup>
+    <DynamicsSDK>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Dynamics\AX\7.0\SDK@DynamicsSDK)</DynamicsSDK>
+    <ModuleToBuild></ModuleToBuild>
+    <ModelsToBuild></ModelsToBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Model Include="$(ModelsToBuild)">
+      <Module>$(ModuleToBuild)</Module>
+    </Model>
+  </ItemGroup>
+  <Import Project="$(DynamicsSDK)\Metadata\Microsoft.Dynamics.AX.Application.Build.targets" />
+</Project>

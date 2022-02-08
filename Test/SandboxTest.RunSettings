@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+
+  <!-- SysTest adapter -->
+  <SysTest>
+    <Runner>devfabric</Runner>
+    <!-- If you want to run tests using devfabric execution on your local dev box then you can leave the following settings empty.-->
+    <!-- 
+    If you want to run tests against a cloud endpoint that has the SysTestServices service running then you need to provide the following information (example values provided)
+    <CloudUri>https://<AX sandbox environment endpoint>/</CloudUri>
+    CloudUri is the end point exposed on the AOS machine. For Multibox/HA cloud environments use the soap endpoint
+ 
+    <UserName>admin@somecompany.com</UserName>
+    UserName of the admin account on the AX instance at that cloud URI enpoint. Used for generating the token for authentication.
+    
+    <FederationRealm>spn:0000-0000-c0000</FederationRealm>
+    Federation realm that will be used to create the token for authentication.
+    
+    <NetworkDomain>https://somecompany.com/</NetworkDomain>
+    NetworkDomain (identity provider) that will be used to create the token for authentication.
+    You can find all of these values in the web.config file on the cloud machine you are targetting.
+
+    <AuthenticationThumbprint>1111111111111111111111111111</AuthenticationThumbprint>
+    AuthenticationThumbprint is the thumbprint of the certificate that will be used for creating a token for authentication. This certificate needs to be preent on the client machine as well as on all AOS
+    machines that are part of the cloud deployment and should be trusted by the wif.config of the AOS machines.
+    -->
+
+    <CloudUri></CloudUri>
+    <UserName></UserName>
+    <FederationRealm></FederationRealm>
+    <NetworkDomain></NetworkDomain>
+    <AuthenticationThumbprint></AuthenticationThumbprint>
+  </SysTest>
+  
+</RunSettings>
