@@ -102,7 +102,11 @@ function Create-DeployableRuntimePackage(
     [string]$DeployableRuntimePackagePath = $null
     if ($PackageNames -ne $null -and $PackageNames.Count -gt 0)
     {
-        $CreatePackageModulePath = Join-Path -Path $DeploymentBinDir -ChildPath "CreatePackage.psm1"
+        $CreatePackageModulePathAuxSDK = Join-Path -Path $DynamicsSDKPath -ChildPath "CreatePackageAux.psm1"
+        $CreatePackageModulePath = Join-Path -Path $DeploymentBinDir -ChildPath "CreatePackageAux.psm1"
+
+        Copy-Item $CreatePackageModulePathAuxSDK -Destination $CreatePackageModulePath -Force
+
         if (!(Test-Path -Path $CreatePackageModulePath -PathType Leaf))
         {
             throw "The create package module does not exist: $CreatePackageModulePath"
@@ -114,14 +118,15 @@ function Create-DeployableRuntimePackage(
         }
 
         Write-Message "- Importing create package module..." -Diag
-        Import-Module $CreatePackageModulePath -Function "New-XppRuntimePackage"
+
+        Import-Module $CreatePackageModulePath -Function "New-XppRuntimePackageAux" -Force
 
         # Create the individual runtime packages.
         foreach ($PackageName in $PackageNames)
         {
             $BuildPackageDrop = Join-Path -Path $BuildBinDir -ChildPath $PackageName
             Write-Message "- $($PackageName): Creating runtime package..." -Diag
-            $RuntimePackagePath = New-XppRuntimePackage -packageName $PackageName -packageDrop $BuildPackageDrop -outputDir $OutputPath -metadataDir $BuildMetadataDir -packageVersion $KernelVersion -binDir $DeploymentBinDir -copyRight $BuildCopyright -webRoot $DeploymentWebRootDir -enforceVersionCheck $enforceVersionCheck
+            $RuntimePackagePath = New-XppRuntimePackageAux -packageName $PackageName -packageDrop $BuildPackageDrop -outputDir $OutputPath -metadataDir $BuildMetadataDir -packageVersion $KernelVersion -binDir $DeploymentBinDir -copyRight $BuildCopyright -webRoot $DeploymentWebRootDir -enforceVersionCheck $enforceVersionCheck -dynamicsToolsPath $DynamicsToolsPath
             if (Test-Path -Path $RuntimePackagePath)
             {
                 Write-Message "- $($PackageName): Created $([System.IO.Path]::GetFileName($RuntimePackagePath))" -Diag
