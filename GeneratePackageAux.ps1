@@ -578,7 +578,8 @@ try
             $OutputPath = Join-Path -Path $BuildPackageDir -ChildPath "Runtime"
             Write-Message "Creating deployable runtime package..."
             $DeployablePackagePath = Create-DeployableRuntimePackage -PackageNames $BuildPackageNames -OutputPath $OutputPath -DeploymentBinDir $DeploymentBinDir -BuildBinDir $BuildBinDir -BuildMetadataDir $BuildMetadataDir -BuildVersion $BuildVersion -KernelVersion $KernelVersion -BuildCopyright $BuildCopyright -DeploymentWebRootDir $DeploymentWebRootDir -enforceVersionCheck $SealedApp
-            Write-Message "Created deployable runtime package: $DeployablePackagePath"
+            Rename-Item -Path $DeployablePackagePath -NewName $PackageFilePath
+	    Write-Message "Created deployable runtime package: $DeployablePackagePath $PackageFilePath"
         }
         else
         {
@@ -652,8 +653,7 @@ try
             $OutputPath = Join-Path -Path $BuildPackageDir -ChildPath "Source"
             Write-Message "Creating model source package..."
             $DeployablePackagePath = Create-ModelSourcePackage -ModelNames $BuildModelNames -OutputPath $OutputPath -DeploymentBinDir $DeploymentBinDir -BuildBinDir $BuildBinDir -DeploymentMetadataDir $DeploymentMetadataDir -BuildVersion $BuildVersion -KernelVersion $KernelVersion
-	    Rename-Item -Path $DeployablePackagePath -NewName $PackageFilePath
-	    Write-Message "Created model source package: $DeployablePackagePath $PackageFilePath"
+	    Write-Message "Created model source package: $DeployablePackagePath"
         }
         else
         {
