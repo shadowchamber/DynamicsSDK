@@ -62,13 +62,15 @@ Param(
     [Parameter(Mandatory=$false, HelpMessage="MetadataPath path replacing reg value")]
     [string]$MetadataPath,
 
-    [Parameter(Mandatory=$false, HelpMessage="WebConfigPath path replacing reg value")]
+    [Parameter(Mandatory=$false, HelpMessage="WebConfigPath path")]
     [string]$WebConfigPath,
 
-    [Parameter(Mandatory=$false, HelpMessage="DynamicsTools path replacing reg value")]
-    [string]$DynamicsToolsPath
+    [Parameter(Mandatory=$false, HelpMessage="DynamicsTools path")]
+    [string]$DynamicsToolsPath,
 
-    
+    [Parameter(Mandatory=$false, HelpMessage="Package file path")]
+    [string]$PackageFilePath
+
 )
 
 # Signal package generation start
@@ -650,7 +652,8 @@ try
             $OutputPath = Join-Path -Path $BuildPackageDir -ChildPath "Source"
             Write-Message "Creating model source package..."
             $DeployablePackagePath = Create-ModelSourcePackage -ModelNames $BuildModelNames -OutputPath $OutputPath -DeploymentBinDir $DeploymentBinDir -BuildBinDir $BuildBinDir -DeploymentMetadataDir $DeploymentMetadataDir -BuildVersion $BuildVersion -KernelVersion $KernelVersion
-            Write-Message "Created model source package: $DeployablePackagePath"
+	    Rename-Item -Path $DeployablePackagePath -NewName $PackageFilePath
+	    Write-Message "Created model source package: $DeployablePackagePath $PackageFilePath"
         }
         else
         {
